@@ -1,4 +1,4 @@
-name: Release WebCraft
+name: Release Windows
 on:
   push:
     tags: ['v*']
@@ -8,34 +8,20 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: macos-latest
-            target: aarch64-apple-darwin
-
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
-      - run: pwd && ls -la && ls -la src-tauri || true
-
-      - name: Install Linux deps
-        if: matrix.os == 'ubuntu-22.04'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: pwd && ls -la
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
 
@@ -46,7 +32,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "WebCraft Studio ${{ github.ref_name }}"
-          releaseBody: 'Crea páginas web sin escribir código. Descarga el ejecutable para tu sistema.'
+          releaseName: "WebCraft ${{ github.ref_name }}"
           releaseDraft: true
-          prerelease: false
