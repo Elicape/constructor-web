@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=WebCraft_Studio
+Comment=Crea páginas web sin código
+Exec=/home/seroot/IA-APPS/published/constructor-web/src-tauri/target/release/webcraft-studio
+Icon=/home/seroot/IA-APPS/published/constructor-web/docs/logo.png
+Path=/home/seroot/IA-APPS/published/constructor-web
+Terminal=false
+StartupNotify=false
