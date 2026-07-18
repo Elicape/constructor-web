@@ -201,6 +201,7 @@ export default function MenuBar() {
   ];
 
   return (
+    <>
     <div ref={barRef} className="fixed top-0 left-0 right-0 z-[15000] bg-editor-secondary/95 backdrop-blur-md border-b border-editor-border select-none">
       <div className="flex items-center h-9 px-2 gap-0">
         <span className="text-sm font-bold text-editor-accent mr-3 shrink-0">WebCraft</span>
@@ -372,5 +373,6 @@ export default function MenuBar() {
           </div>
         </div>
       </Modal>
+    </>
   );
 }
