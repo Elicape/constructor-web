@@ -1,15 +1,15 @@
 name: Release WebCraft
-
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    permissions:
-      contents: write
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
@@ -17,40 +17,34 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
-            target: x86_64-apple-darwin
+            target: aarch64-apple-darwin
 
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-22.04'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
 
-      - name: Install deps (ubuntu)
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Install frontend deps
-        run: npm install
+      - run: npm install
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'WebCraft Studio ${{ github.ref_name }}'
+          releaseName: "WebCraft Studio ${{ github.ref_name }}"
           releaseBody: 'Crea páginas web sin escribir código. Descarga el ejecutable para tu sistema.'
           releaseDraft: true
           prerelease: false
