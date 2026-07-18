@@ -1,0 +1,24 @@
+[package]
+name = "webcraft-studio"
+version = "1.0.0"
+description = "WebCraft Studio - Visual Web Page Editor"
+authors = ["WebCraft"]
+edition = "2021"
+
+[lib]
+name = "webcraft_studio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "webcraft-studio"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

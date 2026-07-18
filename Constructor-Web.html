@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebCraft - Editor Visual Sin Código</title>
+<style>
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+    }
+
+    :root {
+        --bg-primary: #0f172a;
+        --bg-secondary: #1e293b;
+        --bg-tertiary: #334155;
+        --text-primary: #f1f5f9;
+        --text-secondary: #cbd5e1;
+        --accent: #6366f1;
+        --accent-hover: #4f46e5;
+        --border: #475569;
+        --success: #10b981;
+        --danger: #ef4444;
+        --bg-editor: #0f172a;
+    }
+
+    body {
+        font-family: 'Inter', system-ui, sans-serif;
+        background: var(--bg-editor);
+        color: var(--text-primary);
+        overflow-x: hidden;
+        transition: background 0.3s, color 0.3s;
+    }
+
+    body.modo-preview .editor-toolbar,
+    body.modo-preview .section-wrapper,
+    body.modo-preview .modal,
+    body.modo-preview .context-menu,
+    body.modo-preview #notifications {
+        display: none !important;
+    }
+
+    .editor-toolbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10000;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(12px);
+        padding: 0.5rem 0;
+    }
+
+    .toolbar-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .toolbar-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: var(--accent);
+        white-space: nowrap;
+    }
+
+    .toolbar-buttons {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .control-btn {
+        height: 36px;
+        padding: 0 1rem;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .control-btn:hover {
+        background: var(--accent);
+        transform: translateY(-1px);
+    }
+
+    .control-btn.active {
+        background: var(--accent);
+    }
+
+    .control-btn.danger {
+        background: var(--danger);
+    }
+
+    .control-btn.danger:hover {
+        background: #dc2626;
+    }
+
+    .control-btn.small {
+        height: 32px;
+        padding: 0 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    .editable {
+        outline: 2px dashed transparent;
+        outline-offset: 2px;
+        transition: all 0.2s ease;
+        position: relative;
+        min-height: 1em;
+        cursor: text;
+        display: inline-block;
+        min-width: 0.5em;
+    }
+
+    .editable:hover, .editable:focus {
+        outline-color: var(--accent);
+        outline-style: dashed;
+        outline-width: 2px;
+        z-index: 10;
+    }
+
+    .editable.active {
+        outline-color: var(--accent);
+        background: rgba(99, 102, 241, 0.05);
+        border-radius: 2px;
+    }
+
+    .section-wrapper {
+        position: relative;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+        cursor: grab;
+    }
+
+    .section-wrapper.grabbing {
+        cursor: grabbing;
+    }
+
+    .section-wrapper:hover .section-controls {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .section-controls {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        display: flex;
+        gap: 4px;
+        z-index: 100;
+        background: var(--bg-secondary);
+        padding: 4px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .bloque-arrastrable {
+        position: relative;
+        cursor: grab;
+        user-select: none;
+        transition: transform 0.2s, opacity 0.2s;
+        margin-bottom: 0.5rem;
+    }
+
+    .bloque-arrastrable.grabbing {
+        cursor: grabbing;
+        opacity: 0.8;
+    }
+
+    .bloque-arrastrable.dragging {
+        opacity: 0.5;
+        z-index: 1000;
+    }
+
+    .bloque-arrastrable:hover {
+        transform: translateY(-2px);
+    }
+
+    .bloque-content {
+        min-height: 2rem;
+        padding: 0.5rem;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+
+    .bloque-content:hover {
+        background: rgba(99, 102, 241, 0.05);
+    }
+
+    .image-container {
+        position: relative;
+        display: inline-block;
+        max-width: 100%;
+        margin: 0.5rem 0;
+    }
+
+    .image-container img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 4px;
+    }
+
+    .image-container:hover .image-controls {
+        opacity: 1;
+    }
+
+    .image-controls {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        display: flex;
+        gap: 4px;
+        background: rgba(15, 23, 42, 0.9);
+        padding: 4px;
+        border-radius: 8px;
+        z-index: 10;
+    }
+
+    .resize-handle {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 16px;
+        height: 16px;
+        background: var(--accent);
+        cursor: nwse-resize;
+        border-radius: 4px 0 8px 0;
+        opacity: 0;
+        transition: opacity 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75rem;
+    }
+
+    .image-container:hover .resize-handle {
+        opacity: 1;
+    }
+
+    .text-with-image {
+        display: flow-root;
+    }
+
+    .text-with-image .image-container {
+        float: left;
+        margin: 0 1rem 1rem 0;
+    }
+
+    .text-with-image.float-right .image-container {
+        float: right;
+        margin: 0 0 1rem 1rem;
+    }
+
+    .panel {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        margin: 1rem 0;
+        background: var(--bg-secondary);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .panel-header {
+        padding: 1rem 1.5rem;
+        background: var(--bg-tertiary);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        user-select: none;
+        transition: background 0.2s;
+    }
+
+    .panel-header:hover {
+        background: var(--bg-primary);
+    }
+
+    .panel-content {
+        padding: 1.5rem;
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .panel.active .panel-content {
+        display: block;
+    }
+
+    .panel.fixed .panel-content {
+        display: block;
+    }
+
+    .panel-header .fa-chevron-down {
+        transition: transform 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+    }
+
+    .panel.active .fa-chevron-down {
+        transform: rotate(180deg);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 20000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: var(--bg-secondary);
+        padding: 2rem;
+        border-radius: 16px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        border: 1px solid var(--border);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .close-modal {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+    }
+
+    .close-modal:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .form-control[type="color"] {
+        height: 48px;
+        padding: 0;
+        border: none;
+        cursor: pointer;
+    }
+
+    .form-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 1rem;
+    }
+
+    .btn-primary {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+
+    .tabs {
+        display: flex;
+        border-bottom: 2px solid var(--border);
+        margin-bottom: 1.5rem;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+    }
+
+    .tab-btn {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        white-space: nowrap;
+        font-size: 0.875rem;
+    }
+
+    .tab-btn:hover {
+        color: var(--text-primary);
+        background: rgba(99, 102, 241, 0.1);
+    }
+
+    .tab-btn.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+    }
+
+    .tab-content {
+        display: none;
+        padding: 1.5rem 0;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .tab-wrapper-vertical {
+        display: flex;
+        gap: 2rem;
+    }
+
+    .context-menu {
+        position: fixed;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.5rem;
+        z-index: 30000;
+        display: none;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        min-width: 200px;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: all 0.2s ease;
+    }
+
+    .context-menu.active {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .context-menu-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+        color: var(--text-primary);
+    }
+
+    .context-menu-item:hover {
+        background: var(--bg-tertiary);
+    }
+
+    .notifications {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 50000;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        pointer-events: none;
+    }
+
+    .toast {
+        background: var(--success);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        z-index: 40000;
+        display: none;
+        animation: slideIn 0.3s ease;
+        pointer-events: auto;
+        font-size: 0.875rem;
+        max-width: 300px;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+    }
+
+    .toast.show {
+        display: block;
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .toast.error {
+        background: var(--danger);
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .page-content {
+        padding-top: 80px;
+        min-height: 100vh;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .component-library {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .component-card {
+        background: var(--bg-tertiary);
+        padding: 1.5rem 1rem;
+        border-radius: 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .component-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    }
+
+    .component-icon {
+        font-size: 2rem;
+        color: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+    }
+
+    .component-title {
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .hidden-section {
+        display: none !important;
+    }
+
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+        100% { box-shadow: none; }
+    }
+
+    .section-wrapper.active-drop {
+        animation: pulse 1s infinite;
+    }
+
+    @media (max-width: 768px) {
+        .toolbar-buttons {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .control-btn {
+            height: 32px;
+            padding: 0 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .toolbar-title {
+            font-size: 1rem;
+        }
+
+        .modal-content {
+            padding: 1.5rem;
+        }
+
+        .component-library {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+
+        .component-icon {
+            font-size: 1.5rem;
+            width: 36px;
+            height: 36px;
+        }
+
+        .section-controls {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .tab-wrapper-vertical {
+            flex-direction: column;
+        }
+    }
+    .fa {
+        font-family: 'Font Awesome 6 Free' !important;
+        font-weight: 900 !important;
+        font-style: normal !important;
+        font-variant: normal !important;
+        text-rendering: auto !important;
+        line-height: 1 !important;
+        display: inline-block;
+        text-decoration: inherit;
+    }
+    .fa-solid::before {
+        font-family: 'Font Awesome 6 Free' !important;
+        font-weight: 900 !important;
+        content: var(--fa);\n    }
+</style>
+
+<body>
+    <div id="notifications" class="notifications"></div>
+
+    <div class="editor-toolbar">
+        <div class="toolbar-content">
+            <div class="toolbar-left">
+                <i class="fa fa-wand-magic-sparkles text-xl text-indigo-500"></i>
+                <span class="toolbar-title">WebCraft</span>
+            </div>
+            <div class="toolbar-buttons">
+                <button onclick="openComponentLibrary()" class="control-btn" title="Añadir">
+                    <i class="fa fa-plus"></i>
+                    <span>Añadir</span>
+                </button>
+                <button onclick="openPageSettings()" class="control-btn" title="Configurar">
+                    <i class="fa fa-gear"></i>
+                    <span>Configurar</span>
+                </button>
+                <button onclick="savePage()" class="control-btn" title="Guardar">
+                    <i class="fa fa-floppy-disk"></i>
+                    <span>Guardar</span>
+                </button>
+                <button onclick="exportHTML()" class="control-btn" title="Exportar">
+                    <i class="fa fa-download"></i>
+                    <span>Exportar</span>
+                </button>
+                <button onclick="togglePreview()" class="control-btn" title="Vista Previa">
+                    <i class="fa fa-eye"></i>
+                    <span>Vista Previa</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-content" class="page-content">
+        <div id="sections-container">
+        </div>
+    </div>
+
+    <div id="componentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Añadir Sección</div>
+                <button onclick="closeModal('componentModal')" class="close-modal">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="component-library">
+            <div class="component-card" data-type="hero" onclick="addSection('hero')">
+                <div class="component-icon">
+                    <i class="fa fa-heading"></i>
+                </div>
+                <div class="component-title">Hero</div>
+            </div>
+            <div class="component-card" data-type="text" onclick="addSection('text')">
+                <div class="component-icon">
+                    <i class="fa fa-align-left"></i>
+                </div>
+                <div class="component-title">Texto</div>
+            </div>
+            <div class="component-card" data-type="text-image" onclick="addSection('text-image')">
+                <div class="component-icon">
+                    <i class="fa fa-image"></i>
+                </div>
+                <div class="component-title">Texto + Imagen</div>
+            </div>
+            <div class="component-card" data-type="tabs" onclick="addSection('tabs')">
+                <div class="component-icon">
+                    <i class="fa fa-table-columns"></i>
+                </div>
+                <div class="component-title">Pestañas</div>
+            </div>
+            <div class="component-card" data-type="panel" onclick="addSection('panel')">
+                <div class="component-icon">
+                    <i class="fa fa-window-maximize"></i>
+                </div>
+                <div class="component-title">Panel Expandible</div>
+            </div>
+            <div class="component-card" data-type="cards" onclick="addSection('cards')">
+                <div class="component-icon">
+                    <i class="fa fa-th"></i>
+                </div>
+                <div class="component-title">Tarjetas</div>
+            </div>
+            <div class="component-card" data-type="cta" onclick="addSection('cta')">
+                <div class="component-icon">
+                    <i class="fa fa-bullhorn"></i>
+                </div>
+                <div class="component-title">CTA</div>
+            </div>
+            <div class="component-card" data-type="spacer" onclick="addSection('spacer')">
+                <div class="component-icon">
+                    <i class="fa fa-arrows-up-down"></i>
+                </div>
+                <div class="component-title">Espaciador</div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pageSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Configuración de Página</div>
+                <button onclick="closeModal('pageSettingsModal')" class="close-modal">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('pageSettings', 'general')">General</button>
+                <button class="tab-btn" onclick="switchTab('pageSettings', 'layout')">Diseño</button>
+                <button class="tab-btn" onclick="switchTab('pageSettings', 'theme')">Tema</button>
+                <button class="tab-btn" onclick="switchTab('pageSettings', 'panels')">Paneles</button>
+            </div>
+
+            <div id="pageSettings-general" class="tab-content active">
+                <div class="form-group">
+                    <label class="form-label">Título de la Página</label>
+                    <input id="pageTitle" type="text" class="form-control" placeholder="Mi Página Web">
+                </div>
+            </div>
+
+            <div id="pageSettings-layout" class="tab-content">
+                <div class="form-group">
+                    <label class="form-label">Layout de Menú</label>
+                    <select id="menuLayout" class="form-select">
+                        <option value="horizontal">Horizontal Superior</option>
+                        <option value="vertical-left">Vertical Izquierdo</option>
+                        <option value="vertical-right">Vertical Derecho</option>
+                        <option value="center">Centrado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Elementos Visible</label>
+                    <div id="visibilityOptions" class="space-y-2">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Controles Móviles</label>
+                    <select id="mobileControls" class="form-select">
+                        <option value="expanded">Expandidos</option>
+                        <option value="collapsed">Colapsados</option>
+                        <option value="hidden">Ocultos</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="pageSettings-theme" class="tab-content">
+                <div class="form-group">
+                    <label class="form-label">Color de Fondo</label>
+                    <input id="bgColor" type="color" class="form-control" value="#0f172a">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Color Acento</label>
+                    <input id="accentColor" type="color" class="form-control" value="#6366f1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Color del Texto</label>
+                    <input id="textColor" type="color" class="form-control" value="#f1f5f9">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fuente Principal</label>
+                    <select id="fontFamily" class="form-select">
+                        <option value="Inter">Inter</option>
+                        <option value="system-ui">Sistema</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Courier New">Courier New</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="pageSettings-panels" class="tab-content">
+                <div class="form-group">
+                    <label class="form-label">Configuración de Paneles</label>
+                    <div id="panelOptions">
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+                <button onclick="applyPageSettings()" class="btn-primary" style="width: 100%;">
+                    Aplicar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="linkModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Insertar Enlace</div>
+                <button onclick="closeModal('linkModal')" class="close-modal">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">URL</label>
+                <input id="linkUrl" type="url" class="form-control" placeholder="https://ejemplo.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Texto del Enlace</label>
+                <input id="linkText" type="text" class="form-control" placeholder="Haz click aquí">
+            </div>
+            <div class="form-group">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <input id="linkNewTab" type="checkbox" class="form-control" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label>Abrir en nueva pestaña</label>
+                </div>
+            </div>
+            <button onclick="insertLink()" class="btn-primary" style="width: 100%;">
+                Insertar Enlace
+            </button>
+        </div>
+    </div>
+
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Insertar Imagen</div>
+                <button onclick="closeModal('imageModal')" class="close-modal">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">URL de la Imagen</label>
+                <input id="imageUrl" type="url" class="form-control" placeholder="https://ejemplo.com/imagen.jpg">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Texto Alternativo</label>
+                <input id="imageAlt" type="text" class="form-control" placeholder="Descripción de la imagen">
+            </div>
+            <div class="form-group">
+                <label class="form-label">O subir archivo</label>
+                <input id="imageFile" type="file" accept="image/*" class="form-control" style="padding: 0.5rem; cursor: pointer;">
+            </div>
+            <button onclick="insertImage()" class="btn-primary" style="width: 100%;">
+                Insertar Imagen
+            </button>
+        </div>
+    </div>
+
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="openLinkModal()">
+            <i class="fa fa-link"></i>
+            <span>Insertar Enlace</span>
+        </div>
+        <div class="context-menu-item" onclick="openImageModal()">
+            <i class="fa fa-image"></i>
+            <span>Insertar Imagen</span>
+        </div>
+        <div class="context-menu-item" onclick="formatText('bold')">
+            <i class="fa fa-bold"></i>
+            <span>Negrita</span>
+        </div>
+        <div class="context-menu-item" onclick="formatText('italic')">
+            <i class="fa fa-italic"></i>
+            <span>Cursiva</span>
+        </div>
+        <div class="context-menu-item" onclick="formatText('underline')">
+            <i class="fa fa-underline"></i>
+            <span>Subrayado</span>
+        </div>
+    </div>
+
+    <script>
+        let isPreviewMode = false;
+        let currentEditingElement = null;
+        let sectionCounter = 0;
+        let currentDragElement = null;
+        let originalDropTarget = null;
+        let toastTimeout = null;
+
+        // Open component library modal
+        function openComponentLibrary() {
+            openModal('componentModal');
+        }
+
+        // Open page settings modal
+        function openPageSettings() {
+            openModal('pageSettingsModal');
+        }
+
+        // Initialize application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPage();
+            initDragAndDrop();
+            setupEditableElements();
+            setupMobileControls();
+            updateVisibilityOptions();
+            updatePanelOptions();
+            setupComponentLibraryDrag();
+            initContextMenu();
+        });
+
+        // Toast notification system
+        function showToast(message, isError = false) {
+            const container = document.getElementById('notifications');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if (isError) toast.classList.add('error');
+            toast.textContent = message;
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Update visibility checkboxes for each section
+        function updateVisibilityOptions() {
+            const container = document.getElementById('visibilityOptions');
+            const sectionsContainer = document.getElementById('sections-container');
+            const sections = sectionsContainer.querySelectorAll('.section-wrapper');
+
+            container.innerHTML = '';
+
+            sections.forEach((section, index) => {
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.gap = '0.75rem';
+                div.style.padding = '0.75rem';
+                div.style.background = 'var(--bg-tertiary)';
+                div.style.borderRadius = '8px';
+                div.style.marginBottom = '0.5rem';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `section-${index}`;
+                checkbox.checked = !section.classList.contains('hidden-section');
+                checkbox.onchange = function() {
+                    section.classList.toggle('hidden-section', !this.checked);
+                    savePageToStorage();
+                };
+
+                const label = document.createElement('label');
+                label.htmlFor = `section-${index}`;
+                label.textContent = section.dataset.sectionType || `Sección ${index + 1}`;
+                label.style.cursor = 'pointer';
+                label.style.flex = '1';
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
+        }
+
+        // Update panel checkbox options
+        function updatePanelOptions() {
+            const container = document.getElementById('panelOptions');
+            const panels = document.querySelectorAll('.panel');
+
+            container.innerHTML = '';
+
+            panels.forEach((panel, index) => {
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.gap = '0.75rem';
+                div.style.padding = '0.75rem';
+                div.style.background = 'var(--bg-tertiary)';
+                div.style.borderRadius = '8px';
+                div.style.marginBottom = '0.5rem';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `panel-${index}`;
+                const isFixed = panel.classList.contains('fixed');
+                checkbox.checked = isFixed;
+                checkbox.onchange = function() {
+                    panel.classList.toggle('fixed', this.checked);
+                    if (this.checked) {
+                        panel.classList.add('active');
+                        showToast('Panel fijado', false);
+                    } else {
+                        panel.classList.remove('active');
+                        showToast('Panel expandible', false);
+                    }
+                    savePageToStorage();
+                };
+
+                const label = document.createElement('label');
+                label.htmlFor = `panel-${index}`;
+                label.textContent = `Panel ${index + 1}: ${isFixed ? 'Fijo' : 'Expandible'}`;
+                label.style.cursor = 'pointer';
+                label.style.flex = '1';
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
+        }
+
+        // Setup editable elements with improved click-to-edit behavior
+        function setupEditableElements() {
+            document.querySelectorAll('.editable').forEach(el => {
+                el.contentEditable = !isPreviewMode;
+                
+                // Click to enter edit mode
+                el.addEventListener('click', function(e) {
+                    if (isPreviewMode) return;
+                    e.stopPropagation();
+                    if (!el.classList.contains('active')) {
+                        el.classList.add('active');
+                        setTimeout(() => {
+                            const range = document.createRange();
+                            range.selectNodeContents(el);
+                            const selection = window.getSelection();
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                        }, 10);
+                    }
+                });
+
+                // Blur to save with immediate visual feedback
+                el.addEventListener('blur', function() {
+                    if (isPreviewMode) return;
+                    setTimeout(() => {
+                        el.classList.remove('active');
+                        savePageToStorage();
+                    }, 100);
+                });
+
+                // Handle Enter key for creating new text nodes
+                el.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        const text = el.textContent;
+                        if (text.trim()) {
+                            const newEl = document.createElement(el.tagName);
+                            newEl.className = el.className;
+                            newEl.textContent = '';
+                            newEl.contentEditable = !isPreviewMode;
+                            newEl.addEventListener('blur', function() {
+                                if (isPreviewMode) return;
+                                setTimeout(() => {
+                                    newEl.classList.remove('active');
+                                    savePageToStorage();
+                                }, 100);
+                            });
+
+                            el.parentNode.insertBefore(newEl, el.nextSibling);
+                            el.remove();
+                            newEl.focus();
+                        }
+                    }
+                });
+            });
+        }
+
+        // Setup drag and drop for component library items
+        function setupComponentLibraryDrag() {
+            const cards = document.querySelectorAll('.component-card');
+            cards.forEach(card => {
+                card.draggable = true;
+                card.addEventListener('dragstart', function(e) {
+                    const sectionType = this.getAttribute('data-type');
+                    e.dataTransfer.setData('text/plain', sectionType);
+                    e.dataTransfer.effectAllowed = 'copy';
+                    this.classList.add('dragging');
+                });
+
+                card.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                });
+            });
+        }
+
+        // Initialize drag and drop functionality
+        function initDragAndDrop() {
+            const sectionsContainer = document.getElementById('sections-container');
+            const pageContent = document.getElementById('page-content');
+
+            pageContent.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+
+            pageContent.addEventListener('drop', function(e) {
+                e.preventDefault();
+                const sectionType = e.dataTransfer.getData('text/plain');
+                if (sectionType) {
+                    placeBlockAtPosition(sectionType, e.clientX, e.clientY);
+                }
+            });
+
+            document.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (currentDragElement) {
+                    const elemUnder = document.elementFromPoint(e.clientX, e.clientY);
+                    if (elemUnder && elemUnder.classList.contains('section-wrapper')) {
+                        elemUnder.classList.add('active-drop');
+                        originalDropTarget = elemUnder;
+                    } else if (originalDropTarget) {
+                        originalDropTarget.classList.remove('active-drop');
+                        originalDropTarget = null;
+                    }
+
+                    if (elemUnder && elemUnder.classList.contains('bloque-arrastrable')) {
+                        elemUnder.classList.add('over');
+                    } else if (document.querySelector('.bloque-arrastrable.over')) {
+                        document.querySelector('.bloque-arrastrable.over').classList.remove('over');
+                    }
+                }
+            });
+
+            document.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (currentDragElement) {
+                    const elemUnder = document.elementFromPoint(e.clientX, e.clientY);
+                    if (elemUnder && elemUnder.classList.contains('section-wrapper')) {
+                        const targetSection = elemUnder;
+                        moveBlockToSection(currentDragElement, targetSection);
+                    } else if (elemUnder && elemUnder.classList.contains('bloque-arrastrable')) {
+                        reorderBlocks(currentDragElement, elemUnder);
+                    }
+
+                    currentDragElement = null;
+                    originalDropTarget = null;
+
+                    document.querySelectorAll('.bloque-arrastrable').forEach(block => {
+                        block.classList.remove('active-drop', 'over');
+                    });
+                    document.querySelectorAll('.section-wrapper').forEach(section => {
+                        section.classList.remove('active-drop');
+                    });
+                }
+            });
+        }
+
+        // Highlight drop target for sections
+        function highlightSectionDropTarget() {
+            document.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (currentDragElement) {
+                    const elemUnder = document.elementFromPoint(e.clientX, e.clientY);
+                    if (elemUnder && elemUnder.classList.contains('section-wrapper')) {
+                        elemUnder.classList.add('active-drop');
+                        originalDropTarget = elemUnder;
+                    } else if (originalDropTarget) {
+                        originalDropTarget.classList.remove('active-drop');
+                        originalDropTarget = null;
+                    }
+
+                    if (elemUnder && elemUnder.classList.contains('bloque-arrastrable')) {
+                        elemUnder.classList.add('over');
+                    } else if (document.querySelector('.bloque-arrastrable.over')) {
+                        document.querySelector('.bloque-arrastrable.over').classList.remove('over');
+                    }
+                }
+            });
+
+            document.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (currentDragElement) {
+                    const elemUnder = document.elementFromPoint(e.clientX, e.clientY);
+                    if (elemUnder && elemUnder.classList.contains('section-wrapper')) {
+                        const targetSection = elemUnder;
+                        moveBlockToSection(currentDragElement, targetSection);
+                    } else if (elemUnder && elemUnder.classList.contains('bloque-arrastrable')) {
+                        reorderBlocks(currentDragElement, elemUnder);
+                    }
+
+                    currentDragElement = null;
+                    originalDropTarget = null;
+
+                    document.querySelectorAll('.bloque-arrastrable').forEach(block => {
+                        block.classList.remove('active-drop', 'over');
+                    });
+                    document.querySelectorAll('.section-wrapper').forEach(section => {
+                        section.classList.remove('active-drop');
+                    });
+                }
+            });
+        }
+
+        // Place a block at current mouse position
+        function placeBlockAtPosition(sectionType, x, y) {
+            const elemUnder = document.elementFromPoint(x, y);
+            const container = document.getElementById('sections-container');
+            
+            if (elemUnder && elemUnder.classList.contains('bloque-arrastrable')) {
+                insertAfter(createSection(sectionType), elemUnder);
+            } else {
+                container.appendChild(createSection(sectionType));
+            }
+            savePageToStorage();
+            showToast('Bloque añadido');
+        }
+
+        // Create a new section
+        function createSection(type) {
+            sectionCounter++;
+            const sectionWrapper = document.createElement('div');
+            sectionWrapper.className = 'section-wrapper';
+            sectionWrapper.dataset.sectionType = type;
+            sectionWrapper.dataset.sectionId = sectionCounter;
+
+            const controls = document.createElement('div');
+            controls.className = 'section-controls';
+
+            const moveBtn = document.createElement('button');
+            moveBtn.className = 'control-btn drag-handle';
+            moveBtn.title = 'Mover';
+            moveBtn.innerHTML = '<i class="fa fa-grip-vertical"></i>';
+            moveBtn.onclick = function(e) {
+                e.stopPropagation();
+                showToast('Arrastra esta sección para moverla');
+            };
+            controls.appendChild(moveBtn);
+
+            const duplicateBtn = document.createElement('button');
+            duplicateBtn.className = 'control-btn';
+            duplicateBtn.title = 'Duplicar';
+            duplicateBtn.innerHTML = '<i class="fa fa-copy"></i>';
+            duplicateBtn.onclick = function(e) {
+                e.stopPropagation();
+                duplicateSection(this);
+            };
+            controls.appendChild(duplicateBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'control-btn danger';
+            deleteBtn.title = 'Eliminar';
+            deleteBtn.innerHTML = '<i class="fa fa-trash"></i>';
+            deleteBtn.onclick = function(e) {
+                e.stopPropagation();
+                deleteSection(this);
+            };
+            controls.appendChild(deleteBtn);
+
+            sectionWrapper.appendChild(controls);
+
+            const bloque = document.createElement('div');
+            bloque.className = 'bloque-arrastrable';
+            bloque.draggable = true;
+            bloque.dataset.blockId = `block-${sectionCounter}`;
+
+            bloque.innerHTML = createSectionContent(type);
+
+            bloque.addEventListener('dragstart', function(e) {
+                currentDragElement = this;
+                e.dataTransfer.setData('text/plain', this.dataset.blockId);
+                e.dataTransfer.effectAllowed = 'move';
+                this.classList.add('dragging');
+                setTimeout(() => this.classList.add('dragging'), 0);
+                showToast('Arrastra este bloque a otra ubicación');
+            });
+
+            bloque.addEventListener('dragend', function() {
+                this.classList.remove('dragging');
+                currentDragElement = null;
+                showToast('Suelta para colocar');
+            });
+
+            bloque.addEventListener('click', function(e) {
+                if (isPreviewMode) return;
+                e.stopPropagation();
+                const content = this.querySelector('.bloque-content');
+                if (content && !content.querySelector('.editable, input, select, textarea')) {
+                    content.click();
+                }
+            });
+
+            sectionWrapper.appendChild(bloque);
+            initImageResize(sectionWrapper);
+
+            return sectionWrapper;
+        }
+
+        // Create section content based on type
+        function createSectionContent(type) {
+            switch(type) {
+                case 'hero':
+                    return `\n                        <div class=\"bloque-content\" style=\"padding: 2rem; text-align: center; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%); border-radius: 12px; color: white;\">\n                            <h1 class=\"editable\" style=\"font-size: 2.5rem; margin-bottom: 1rem; font-weight: bold;\">Tu Título Aquí</h1>\n                            <p class=\"editable\" style=\"font-size: 1.25rem; margin-bottom: 1.5rem; opacity: 0.9;\">Escribe un subtítulo impactante que describa tu proyecto</p>\n                            <button class=\"editable btn-primary\" style=\"border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: bold; cursor: pointer;\">Llamada a la Acción</button>\n                        </div>\n                    `;
+                case 'text':
+                    return `\n                        <div class=\"bloque-content\" style=\"padding: 1.5rem;\">\n                            <h2 class=\"editable\" style=\"font-size: 1.875rem; margin-bottom: 1rem; font-weight: bold;\">Título de Sección</h2>\n                            <p class=\"editable\" style=\"font-size: 1.125rem; line-height: 1.6;\">Haz click aquí para editar este texto. Puedes añadir párrafos, cambiar el formato y todo lo que necesites.</p>\n                        </div>\n                    `;
+                case 'text-image':
+                    return `\n                        <div class=\"bloque-content\" style=\"padding: 1.5rem;\">\n                            <div style=\"display: flex; gap: 1.5rem; flex-wrap: wrap;\">\n                                <div class=\"image-container\" style=\"flex: 1; min-width: 200px;\">\n                                    <img src=\"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&h=400&fit=crop\" alt=\"Imagen de ejemplo\" style=\"width: 100%; height: auto; border-radius: 8px; object-fit: cover;\">\n                                    <div class=\"image-controls\">\n                                        <button onclick=\"changeImageAlignment(this)\" class=\"control-btn small\" title=\"Cambiar alineación\">\n                                            <i class=\"fa fa-align-left\"></i>\n                                        </button>\n                                        <button onclick=\"removeImage(this)\" class=\"control-btn danger small\" title=\"Eliminar\">\n                                            <i class=\"fa fa-trash\"></i>\n                                        </button>\n                                    </div>\n                                    <div class=\"resize-handle\"></div>\n                                </div>\n                                <div style=\"flex: 2; min-width: 200px;\">\n                                    <p class=\"editable\" style=\"font-size: 1.125rem; line-height: 1.6;\">Este texto rodea la imagen automáticamente. Haz click en la imagen para cambiar su posición.</p>\n                                </div>\n                            </div>\n                        </div>\n                    `;
+                case 'tabs':
+                    return `\n                        <div class=\"bloque-content\" style=\"padding: 1.5rem;\">\n                            <div style=\"display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;\">\n                                <h2 class=\"editable\" style=\"font-size: 1.875rem; font-weight: bold;\">Pestañas Interactivas</h2>\n                                <select onchange=\"changeTabStyle(this)\" class=\"form-control\" style=\"width: auto; padding: 0.5rem;\">\n                                    <option value=\"horizontal\">Horizontal</option>\n                                    <option value=\"vertical\">Vertical</option>\n                                    <option value=\"center\">Centrado</option>\n                                </select>\n                                <button onclick=\"addTab(this)\" class=\"control-btn small\" title=\"Añadir Pestaña\">\n                                    <i class=\"fa fa-plus\"></i>\n                                </button>\n                            </div>\n                            <div class=\"tab-wrapper\" data-tabs-id=\"${sectionCounter}\">\n                                <div class=\"tabs-horizontal\">\n                                    <button class=\"tab-btn active\" onclick=\"switchTab(this, 'tab1-${sectionCounter}')\">\n                                        <span class=\"editable\">Pestaña 1</span>\n                                    </button>\n                                    <button class=\"tab-btn\" onclick=\"switchTab(this, 'tab2-${sectionCounter}')\">\n                                        <span class=\"editable\">Pestaña 2</span>\n                                    </button>\n                                    <button class=\"tab-btn\" onclick=\"switchTab(this, 'tab3-${sectionCounter}')\">\n                                        <span class=\"editable\">Pestaña 3</span>\n                                    </button>\n                                </div>\n                                <div id=\"tab1-${sectionCounter}\" class=\"tab-content active\">\n                                    <p class=\"editable\" style=\"font-size: 1.125rem;\">Contenido de la pestaña 1.</p>\n                                </div>\n                                <div id=\"tab2-${sectionCounter}\" class=\"tab-content\">\n                                    <p class=\"editable\" style=\"font-size: 1.125rem;\">Contenido de la pestaña 2.</p>\n                                </div>\n                                <div id=\"tab3-${sectionCounter}\" class=\"tab-content\">\n                                    <p class=\"editable\" style=\"font-size: 1.125rem;\">Contenido de la pestaña 3.</p>\n                                </div>\n                            </div>\n                        </div>\n                    `;
+                case 'panel':
+                    return `\n                        <div class=\"bloque-content\" style=\"padding: 1.5rem;\">\n                            <div class=\"panel\" data-panel-id=\"${sectionCounter}\">\n                                <div class=\"panel-header\" onclick=\"togglePanel(this)\">\n                                    <h3 class=\"editable\" style=\"font-size: 1.25rem; font-weight: bold;\">Panel Expandible</h3>\n                                    <div style=\"display: flex; align-items: center; gap: 0.5rem;\">\n                                        <button class=\"control-btn small\" onclick=\"event.stopPropagation(); togglePanelFixed(this)\" title=\"Fijar/Expandible\">\n                                            <i class=\"fa fa-thumbtack\"></i>\n                                        </button>\n                                        <i class=\"fa fa-chevron-down\"></i>\n                                    </div>\n                                </div>\n                                <div class=\"panel-content\">\n                                    <p class=\"editable\" style=\"font-size: 1.125rem;\">Este es el contenido del panel. Puedes hacer click en el header para expandir o contraer.</p>\n                                </div>\n                            </div>\n                        </div>\n                    `;
+                case 'cards':
+                    return `\n                        <div class=\"bloque-content\" style=\"padding: 1.5rem;\">\n                            <h2 class=\"editable\" style=\"font-size: 1.875rem; font-weight: bold; text-align: center; margin-bottom: 1.5rem;\">Tarjetas de Contenido</h2>\n                            <div style=\"display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;\">\n                                <div style=\"background: var(--bg-tertiary); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); text-align: center;\">\n                                    <i class=\"fa fa-rocket\" style=\"font-size: 2.5rem; color: var(--accent); margin-bottom: 1rem;\"></i>\n                                    <h3 class=\"editable\" style=\"font-size: 1.25rem; font-weight: bold; margin-bottom: 0.75rem;\">Rápido</h3>\n                                    <p class=\"editable\" style=\"font-size: 0.875rem;\">Edita todo sin código</p>\n                                </div>\n                                <div style=\"background: var(--bg-tertiary); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); text-align: center;\">\n                                    <i class=\"fa fa-palette\" style=\"font-size: 2.5rem; color: var(--accent); margin-bottom: 1rem;\"></i>\n                                    <h3 class=\"editable\" style=\"font-size: 1.25rem; font-weight: bold; margin-bottom: 0.75rem;\">Flexible</h3>\n                                    <p class=\"editable\" style=\"font-size: 0.875rem;\">Arrastra y suelta elementos</p>\n                                </div>\n                                <div style=\"background: var(--bg-tertiary); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); text-align: center;\">\n                                    <i class=\"fa fa-mobile-screen\" style=\"font-size: 2.5rem; color: var(--accent); margin-bottom: 1rem;\"></i>\n                                    <h3 class=\"editable\" style=\"font-size: 1.25rem; font-weight: bold; margin-bottom: 0.75rem;\">Responsive</h3>\n                                    <p class=\"editable\" style=\"font-size: 0.875rem;\">Funciona en móviles</p>\n                                </div>\n                            </div>\n                        </div>\n                    `;
+                case 'cta':
+                    return `\n                        <div class=\"bloque-content\" style=\"padding: 2rem; text-align: center; background: var(--bg-tertiary); border-radius: 12px; border: 1px solid var(--border);\">\n                            <h2 class=\"editable\" style=\"font-size: 2rem; font-weight: bold; margin-bottom: 1rem;\">¿Listo para empezar?</h2>\n                            <p class=\"editable\" style=\"font-size: 1.125rem; margin-bottom: 1.5rem; max-width: 600px; margin-left: auto; margin-right: auto;\">Crea tu página web sin necesidad de saber programación</p>\n                            <button class=\"editable btn-primary\" style=\"border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: bold; cursor: pointer;\">Comenzar Ahora</button>\n                        </div>\n                    `;
+                case 'spacer':
+                    return '<div class=\"bloque-content\" style=\"height: 40px;\"></div>';
+                default:
+                    return '<div class=\"bloque-content\">Sección no reconocida</div>';
+            }
+        }
+
+        // Add a section to the page
+        function addSection(type) {
+            closeModal('componentModal');
+            const container = document.getElementById('sections-container');
+            const section = createSection(type);
+            container.appendChild(section);
+            initImageResize(section);
+            setupEditableElements();
+            savePageToStorage();
+            section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showToast('Sección añadida');
+        }
+
+        // Duplicate a section
+        function duplicateSection(btn) {
+            const section = btn.closest('.section-wrapper');
+            const clone = section.cloneNode(true);
+            section.parentNode.insertBefore(clone, section.nextSibling);
+            initImageResize(clone);
+            setupEditableElements();
+            savePageToStorage();
+            showToast('Sección duplicada');
+        }
+
+        // Delete a section
+        function deleteSection(btn) {
+            const section = btn.closest('.section-wrapper');
+            if (confirm('¿Eliminar esta sección?')) {
+                section.remove();
+                savePageToStorage();
+                showToast('Sección eliminada');
+                updateVisibilityOptions();
+                updatePanelOptions();
+            }
+        }
+
+        // Setup mobile controls
+        function setupMobileControls() {
+            const mobileControls = document.getElementById('mobileControls');
+            if (!mobileControls) return;
+
+            mobileControls.addEventListener('change', function() {
+                const sections = document.querySelectorAll('.section-wrapper');
+                sections.forEach(section => {
+                    section.classList.toggle('mobile-expanded', this.value === 'expanded');
+                    section.classList.toggle('mobile-collapsed', this.value === 'collapsed');
+                    section.classList.toggle('mobile-hidden', this.value === 'hidden');
+                });
+                savePageToStorage();
+                showToast('Configuración móvil actualizada');
+            });
+        }
+
+        // Switch between tab content
+        function switchTab(modalId, tabId) {
+            const modal = document.getElementById(modalId);
+            const tabs = modal.querySelectorAll('.tab-btn');
+            const contents = modal.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => tab.classList.remove('active'));
+            contents.forEach(content => content.classList.remove('active'));
+
+            const activeTab = modal.querySelector(`.tab-btn[onclick*=\"${tabId}\"]`);
+            const activeContent = modal.querySelector(`#${tabId}`);
+
+            if (activeTab && activeContent) {
+                activeTab.classList.add('active');
+                activeContent.classList.add('active');
+            }
+        }
+
+        // Initialize image resize functionality
+        function initImageResize(container) {
+            const handles = container.querySelectorAll('.resize-handle');
+            handles.forEach(handle => {
+                let isResizing = false;
+                let startX = 0;
+                let startWidth = 0;
+
+                handle.addEventListener('mousedown', function(e) {
+                    isResizing = true;
+                    startX = e.clientX;
+                    const containerRect = container.querySelector('.image-container').getBoundingClientRect();
+                    startWidth = containerRect.width;
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', function(e) {
+                    if (!isResizing) return;
+                    const deltaX = e.clientX - startX;
+                    const newWidth = startWidth + deltaX;
+                    if (newWidth > 100 && newWidth < window.innerWidth - 100) {
+                        container.querySelector('.image-container').style.width = newWidth + 'px';
+                    }
+                });
+
+                document.addEventListener('mouseup', function() {
+                    if (isResizing) {
+                        isResizing = false;
+                        savePageToStorage();
+                    }
+                });
+            });
+        }
+
+        // Change image alignment (float)
+        function changeImageAlignment(btn) {
+            const container = btn.closest('.image-container');
+            const wrapper = container.closest('.text-with-image');
+            wrapper.classList.toggle('float-right');
+            savePageToStorage();
+        }
+
+        // Remove image from text-image section
+        function removeImage(btn) {
+            if (confirm('¿Eliminar esta imagen?')) {
+                btn.closest('.image-container').remove();
+                savePageToStorage();
+            }
+        }
+
+        // Toggle panel expand/collapse
+        function togglePanel(header) {
+            const panel = header.closest('.panel');
+            if (!panel.classList.contains('fixed')) {
+                panel.classList.toggle('active');
+            }
+        }
+
+        // Toggle panel between fixed and expandable
+        function togglePanelFixed(btn) {
+            const panel = btn.closest('.panel');
+            panel.classList.toggle('fixed');
+            if (panel.classList.contains('fixed')) {
+                panel.classList.add('active');
+                btn.innerHTML = '<i class=\"fa fa-thumbtack\" style=\"color: var(--accent);\"></i>';
+                showToast('Panel fijado', false);
+            } else {
+                panel.classList.remove('active');
+                btn.innerHTML = '<i class=\"fa fa-thumbtack\"></i>';
+                showToast('Panel expandible', false);
+            }
+            savePageToStorage();
+        }
+
+        // Switch between tabs within a tab section
+        function switchTab(btn, tabId) {
+            const wrapper = btn.closest('.tab-wrapper');
+            wrapper.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            wrapper.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Change tab layout style
+        function changeTabStyle(select) {
+            const wrapper = select.closest('.section-wrapper').querySelector('.tab-wrapper');
+            const tabsContainer = wrapper.querySelector('[class*=\"tabs-\"]');
+            const value = select.value;
+
+            tabsContainer.className = '';
+            wrapper.className = 'tab-wrapper';
+
+            if (value === 'vertical') {
+                tabsContainer.className = 'tabs-vertical';
+                wrapper.classList.add('tab-wrapper-vertical');
+            } else if (value === 'center') {
+                tabsContainer.className = 'tabs-center';
+            } else {
+                tabsContainer.className = 'tabs-horizontal';
+            }
+            savePageToStorage();
+        }
+
+        // Add a new tab to a tab section
+        function addTab(btn) {
+            const wrapper = btn.closest('.section-wrapper').querySelector('.tab-wrapper');
+            const tabsId = wrapper.dataset.tabsId;
+            const tabCount = wrapper.querySelectorAll('.tab-content').length + 1;
+            const newTabId = `tab${tabCount}-${tabsId}`;
+
+            const newBtn = document.createElement('button');
+            newBtn.className = 'tab-btn';
+            newBtn.onclick = function() { switchTab(this, newTabId); };
+            newBtn.innerHTML = `<span class=\"editable\" contenteditable=\"true\">Pestaña ${tabCount}</span>`;
+
+            const newContent = document.createElement('div');
+            newContent.id = newTabId;
+            newContent.className = 'tab-content';
+            newContent.innerHTML = `<p class=\"editable\" style=\"font-size: 1.125rem;\">Contenido de la pestaña ${tabCount}</p>`;
+
+            const tabsContainer = wrapper.querySelector('[class*=\"tabs-\"]');
+            tabsContainer.appendChild(newBtn);
+            wrapper.appendChild(newContent);
+            setupEditableElements();
+            savePageToStorage();
+            showToast('Pestaña añadida');
+        }
+
+        // Insert a link into editable content
+        function insertLink() {
+            const url = document.getElementById('linkUrl').value;
+            const text = document.getElementById('linkText').value;
+            const newTab = document.getElementById('linkNewTab').checked;
+
+            if (!url || !text) {
+                showToast('Por favor completa todos los campos', true);
+                return;
+            }
+
+            if (currentEditingElement) {
+                const link = `<a href=\"${url}\" ${newTab ? 'target=\"_blank\"' : ''} class=\"text-indigo-400 hover:text-indigo-300 underline\">${text}</a>`;
+                document.execCommand('insertHTML', false, link);
+            }
+
+            closeModal('linkModal');
+            document.getElementById('linkUrl').value = '';
+            document.getElementById('linkText').value = '';
+            savePageToStorage();
+            showToast('Enlace insertado');
+        }
+
+        // Insert an image into editable content
+        function insertImage() {
+            const url = document.getElementById('imageUrl').value;
+            const alt = document.getElementById('imageAlt').value;
+            const fileInput = document.getElementById('imageFile');
+
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    insertImageHTML(e.target.result, alt);
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else if (url) {
+                insertImageHTML(url, alt);
+            } else {
+                showToast('Por favor proporciona una URL o sube un archivo', true);
+                return;
+            }
+        }
+
+        // Insert HTML image into editable content
+        function insertImageHTML(src, alt) {
+            if (currentEditingElement) {
+                const imgHTML = `\n                    <div class=\"image-container\" style=\"width: 300px;\">\n                        <img src=\"${src}\" alt=\"${alt || 'Imagen'}\">\n                        <div class=\"image-controls\">\n                            <button class=\"control-btn\" onclick=\"changeImageAlignment(this)\" title=\"Cambiar alineación\">\n                                <i class=\"fa fa-align-left\"></i>\n                            </button>\n                            <button class=\"control-btn danger\" onclick=\"removeImage(this)\" title=\"Eliminar\">\n                                <i class=\"fa fa-trash\"></i>\n                            </button>\n                        </div>\n                        <div class=\"resize-handle\"></div>\n                    </div>\n                `;
+                document.execCommand('insertHTML', false, imgHTML);
+                document.querySelectorAll('.image-container').forEach(initImageResize);
+            }
+
+            closeModal('imageModal');
+            document.getElementById('imageUrl').value = '';
+            document.getElementById('imageAlt').value = '';
+            document.getElementById('imageFile').value = '';
+            savePageToStorage();
+        }
+
+        // Format text (bold, italic, underline) in editable content
+        function formatText(command) {
+            document.execCommand(command, false, null);
+            savePageToStorage();
+        }
+
+        // Update accent color theme
+        function updateAccentColor(color) {
+            document.documentElement.style.setProperty('--accent', color);
+            document.documentElement.style.setProperty('--accent-hover', adjustBrightness(color, -20));
+            savePageToStorage();
+        }
+
+        // Update font family
+        function updateFont(font) {
+            document.body.style.fontFamily = font;
+            savePageToStorage();
+        }
+
+        // Apply all page settings
+        function applyPageSettings() {
+            const title = document.getElementById('pageTitle').value;
+            const color = document.getElementById('accentColor').value;
+            const font = document.getElementById('fontFamily').value;
+
+            if (title) document.title = title;
+            updateAccentColor(color);
+            updateFont(font);
+
+            closeModal('pageSettingsModal');
+            savePageToStorage();
+            showToast('Configuración aplicada');
+        }
+
+        // Adjust color brightness
+        function adjustBrightness(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const r = Math.max(0, Math.min(255, (num >> 16) + percent));
+            const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + percent));
+            const b = Math.max(0, Math.min(255, (num & 0x0000FF) + percent));
+            return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+        }
+
+        // Toggle preview mode
+        function togglePreview() {
+            isPreviewMode = !isPreviewMode;
+            const toolbar = document.querySelector('.editor-toolbar');
+            const controls = document.querySelectorAll('.section-controls, .image-controls, .resize-handle');
+
+            if (isPreviewMode) {
+                toolbar.style.display = 'none';
+                document.querySelectorAll('.editable').forEach(el => {
+                    el.contentEditable = false;
+                    el.style.outline = 'none';
+                    el.classList.remove('active');
+                });
+                controls.forEach(c => c.style.display = 'none');
+                document.body.style.paddingTop = '0';
+                document.body.classList.add('modo-preview');
+                showToast('Modo Vista Previa Activado');
+            } else {
+                toolbar.style.display = 'block';
+                document.querySelectorAll('.editable').forEach(el => {
+                    el.contentEditable = true;
+                });
+                controls.forEach(c => c.style.display = '');
+                document.body.style.paddingTop = '';
+                document.body.classList.remove('modo-preview');
+                setupEditableElements();
+                showToast('Modo Edición Activado');
+            }
+        }
+
+        // Save current page state to localStorage
+        function savePage() {
+            savePageToStorage();
+            showToast('Página guardada correctamente');
+        }
+
+        // Save page to localStorage
+        function savePageToStorage() {
+            const content = document.getElementById('sections-container').innerHTML;
+            const settings = {
+                title: document.title,
+                accentColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+                fontFamily: document.body.style.fontFamily
+            };
+
+            localStorage.setItem('webcraft_content', content);
+            localStorage.setItem('webcraft_settings', JSON.stringify(settings));
+            localStorage.setItem('webcraft_counter', sectionCounter);
+        }
+
+        // Load page from localStorage
+        function loadPage() {
+            const content = localStorage.getItem('webcraft_content');
+            const settings = localStorage.getItem('webcraft_settings');
+            const counter = localStorage.getItem('webcraft_counter');
+
+            if (content) {
+                document.getElementById('sections-container').innerHTML = content;
+                sectionCounter = parseInt(counter) || 0;
+                setupEditableElements();
+                document.querySelectorAll('.image-container').forEach(initImageResize);
+
+                if (settings) {
+                    const s = JSON.parse(settings);
+                    document.title = s.title || 'WebCraft - Editor Visual';
+                    if (s.accentColor) updateAccentColor(s.accentColor);
+                    if (s.fontFamily) updateFont(s.fontFamily);
+                    document.getElementById('pageTitle').value = s.title || '';
+                    document.getElementById('accentColor').value = s.accentColor || '#6366f1';
+                    document.getElementById('fontFamily').value = s.fontFamily || 'Inter';
+                }
+            } else {
+                addSection('hero');
+                setTimeout(() => {
+                    addSection('text');
+                    addSection('cards');
+                }, 100);
+            }
+        }
+
+        // Export HTML content for download
+        function exportHTML() {
+            const content = document.getElementById('page-content').innerHTML;
+
+            const cleanedContent = content
+                .replace(/contenteditable=\"true\"/g, '')
+                .replace(/class=\"editable\"/g, '')
+                .replace(/<div class=\"section-controls\">.*?<\/div>/gs, '')
+                .replace(/<div class=\"image-controls\">.*?<\/div>/gs, '')
+                .replace(/<div class=\"resize-handle\"><\/div>/g, '')
+                .replace(/<div class=\"modal\">.*?<\/div>/gs, '')
+                .replace(/<div class=\"context-menu\">.*?<\/div>/gs, '')
+                .replace(/<div class=\"toast\">.*?<\/div>/gs, '')
+                .replace(/<div class=\"editor-toolbar\">.*?<\/div>/gs, '')
+                .replace(/<div class=\"component-library\">.*?<\/div>/gs, '')
+                .replace(/<div id=\"notifications\">.*?<\/div>/gs, '')
+                .replace(/<div id=\"componentModal\">.*?<\/div>/gs, '')
+                .replace(/<div id=\"pageSettingsModal\">.*?<\/div>/gs, '')
+                .replace(/<div id=\"linkModal\">.*?<\/div>/gs, '')
+                .replace(/<div id=\"imageModal\">.*?<\/div>/gs, '')
+                .replace(/<div class=\"modal active\">.*?<\/div>/gs, '');
+
+            const fullHTML = `<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>${document.title}</title>\n    <style>\n        body {\n            margin: 0;\n            padding: 0;\n            background: #0f172a;\n            color: #f1f5f9;\n            font-family: ${document.body.style.fontFamily || 'Inter'};\n        }\n        .panel-content {\n            display: none;\n        }\n        .panel.active .panel-content, .panel.fixed .panel-content {\n            display: block;\n        }\n        .tab-content {\n            display: none;\n        }\n        .tab-content.active {\n            display: block;\n        }\n        .text-with-image .image-container {\n            float: left;\n            margin: 0 1rem 1rem 0;\n        }\n        .text-with-image.float-right .image-container {\n            float: right;\n            margin: 0 0 1rem 1rem;\n        }\n    </style>\n</head>\n<body>\n    ${cleanedContent}\n</body>\n</html>`;
+
+            const blob = new Blob([fullHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mi-pagina-web.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('HTML exportado');
+        }
+
+        // Close a modal
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('active');
+        }
+
+        // Open a modal
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('active');
+        }
+
+        // Handle context menu
+        function initContextMenu() {
+            document.addEventListener('contextmenu', function(e) {
+                const target = e.target.closest('.editable');
+                if (target && !isPreviewMode) {
+                    e.preventDefault();
+                    currentEditingElement = target;
+                    const menu = document.getElementById('contextMenu');
+                    menu.style.left = e.pageX + 'px';
+                    menu.style.top = e.pageY + 'px';
+                    setTimeout(() => menu.classList.add('active'), 10);
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.context-menu') && !e.target.closest('.editable')) {
+                    document.getElementById('contextMenu').classList.remove('active');
+                }
+            });
+        }
+
+        // Setup sortable sections
+        function setupSortableSections() {
+            const sectionsContainer = document.getElementById('sections-container');
+            let startIndex = null;
+            let currentIndex = null;
+
+            sectionsContainer.addEventListener('dragstart', function(e) {
+                if (e.target.classList.contains('section-wrapper')) {
+                    startIndex = Array.from(e.target.parentNode.children).indexOf(e.target);
+                    e.target.classList.add('dragging');
+                }
+            });
+
+            sectionsContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (e.target.classList.contains('section-wrapper')) {
+                    currentIndex = Array.from(e.target.parentNode.children).indexOf(e.target);
+                    highlightDropTarget(e.target);
+                }
+            });
+
+            sectionsContainer.addEventListener('dragleave', function() {
+                highlightDropTarget(null);
+            });
+
+            sectionsContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (startIndex !== null && currentIndex !== null && startIndex !== currentIndex) {
+                    const sections = Array.from(sectionsContainer.children);
+                    const draggedSection = sections[startIndex];
+                    const targetSection = sections[currentIndex];
+
+                    if (startIndex < currentIndex) {
+                        sectionsContainer.insertBefore(draggedSection, targetSection.nextSibling);
+                    } else {
+                        sectionsContainer.insertBefore(draggedSection, targetSection);
+                    }
+                    savePageToStorage();
+                    showToast('Orden actualizado');
+                }
+                startIndex = null;
+                currentIndex = null;
+                highlightDropTarget(null);
+            });
+        }
+
+        // Highlight drop target for sections
+        function highlightDropTarget(target) {
+            document.querySelectorAll('.section-wrapper').forEach(section => {
+                section.classList.remove('active-drop');
+            });
+            if (target) {
+                target.classList.add('active-drop');
+            }
+        }
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPage();
+            initDragAndDrop();
+            setupEditableElements();
+            setupMobileControls();
+            updateVisibilityOptions();
+            updatePanelOptions();
+            setupComponentLibraryDrag();
+            initContextMenu();
+        });
+
+        window.addEventListener('error', function(e) {
+            console.error('Error:', e.error);
+            showToast('Error en la aplicación', true);
+        });
+
+        console.log('WebCraft initialized successfully');
+        console.log('CHECK: openComponentLibrary existe?', typeof openComponentLibrary);
+        console.log('CHECK: openPageSettings existe?', typeof openPageSettings);
+    </script>
+
+    <script>(function(){document.addEventListener("click",function(e){var a=e.target.closest("[data-product-id]");if(!a)return;e.preventDefault();var pid=a.getAttribute("data-product-id");if(pid)parent.postMessage({type:"ecto-artifact-link-click",productId:pid},"*")})})();</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                const styleSheet = document.querySelector('style');
+                if (styleSheet) {
+                    styleSheet.textContent = styleSheet.textContent.replace(/\s+/g, ' ');
+                }
+            }, 100);
+        });
+    </script>
+
+    <script>
+        function insertAfter(newNode, existingNode) {
+            existingNode.parentNode.insertBefore(newNode, existingNode.nextSibling);
+        }
+    </script>
+</body>
+</html>
+<!-- BUILD COMPLETE v0.3 - LISTO PARA USAR -->

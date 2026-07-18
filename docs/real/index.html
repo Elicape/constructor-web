@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ELICAPE OS — LLEGAR A LA META</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Space Grotesk',system-ui,sans-serif;background:#050A14;color:#e2e8f0;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.mono{font-family:'JetBrains Mono',monospace}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit;text-decoration:none}
+
+/* ===== BACKGROUND ===== */
+.bg{position:fixed;inset:0;z-index:-10;overflow:hidden}
+.bg-wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.07;mix-blend-mode:screen}
+.bg-glow-t{position:absolute;top:-30%;left:50%;transform:translateX(-50%);width:1200px;max-width:100vw;height:800px;background:rgba(0,255,136,0.08);filter:blur(140px);border-radius:50%;pointer-events:none}
+.bg-glow-b{position:absolute;bottom:-20%;right:0;width:800px;max-width:90vw;height:600px;background:rgba(122,140,166,0.12);filter:blur(120px);border-radius:50%;pointer-events:none}
+.bg-sc{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,0.015) 2px,rgba(0,255,136,0.015) 4px);pointer-events:none}
+
+/* ===== CONTAINER ===== */
+.w{max-width:1160px;margin:0 auto;padding:0 2rem}
+@media(max-width:768px){.w{padding:0 1.25rem}}
+
+/* ===== HEADER (block: header) ===== */
+.hd{position:sticky;top:0;z-index:50;border-bottom:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);background:rgba(5,10,20,0.7)}
+.hd-i{display:flex;align-items:center;justify-content:space-between;height:64px}
+.hd-l{display:flex;align-items:center;gap:12px}
+.hd-lb{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.hd-lb img{width:26px;height:26px;object-fit:contain}
+.hd-lb::after{content:'';position:absolute;inset:0;border-radius:10px;box-shadow:inset 0 0 20px rgba(0,255,136,0.15);pointer-events:none}
+.hd-br{line-height:1.2}
+.hd-br-n{font-size:13px;font-weight:600;letter-spacing:0.14em;color:#fff}
+.hd-br-v{font-size:10px;letter-spacing:0.18em;color:rgba(255,255,255,0.4);margin-top:2px}
+.hd-n{display:flex;align-items:center;gap:28px}
+.hd-n a{font-size:11px;letter-spacing:0.16em;color:rgba(255,255,255,0.5);transition:color .2s}
+.hd-n a:hover{color:#fff}
+.hd-n .cta{display:flex;align-items:center;height:32px;padding:0 20px;border-radius:999px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);color:#00FF88;font-size:11px;transition:all .2s}
+.hd-n .cta:hover{background:rgba(0,255,136,0.18);color:#00FF88}
+@media(max-width:768px){.hd-n a:not(.cta){display:none}}
+
+/* ===== HERO (block: hero) ===== */
+.hero{min-height:85vh;display:flex;align-items:center;position:relative;overflow:hidden;padding:5rem 0}
+.hero-in{position:relative;z-index:2}
+.hero-tg{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:999px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.15);font-size:11px;letter-spacing:0.1em;color:#00FF88;margin-bottom:24px}
+.hero-tg .dot{width:6px;height:6px;border-radius:50%;background:#00FF88;box-shadow:0 0 10px #00FF88}
+.hero h1{font-size:clamp(2.5rem,5.5vw,4.25rem);font-weight:800;line-height:1.08;letter-spacing:-0.03em;color:#fff;margin-bottom:20px}
+.hero h1 .gr{background:linear-gradient(135deg,#00FF88,#20d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1.2rem;color:rgba(255,255,255,0.55);max-width:600px;line-height:1.7;margin-bottom:32px}
+.hero-acts{display:flex;gap:12px;flex-wrap:wrap}
+.hero-btn-p{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:999px;background:#00FF88;color:#050A14;font-weight:700;font-size:15px;transition:all .2s;border:none;cursor:pointer}
+.hero-btn-p:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,255,136,0.3)}
+.hero-btn-s{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);font-weight:600;font-size:15px;transition:all .2s;cursor:pointer}
+.hero-btn-s:hover{background:rgba(255,255,255,0.1);color:#fff}
+.hero-gl{position:absolute;top:-10%;right:-10%;width:600px;height:600px;background:radial-gradient(circle,rgba(0,255,136,0.06),transparent 60%);pointer-events:none;z-index:0}
+@media(max-width:768px){
+  .hero{padding:3rem 0;min-height:auto}
+  .hero h1{font-size:2.25rem}
+  .hero p{font-size:1rem}
+}
+
+/* ===== SECTION COMMON ===== */
+.sec{padding:5rem 0}
+@media(max-width:768px){.sec{padding:2.5rem 0}}
+.sec-t{font-size:2rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:1rem;color:#fff}
+.sec-st{font-size:1.05rem;color:rgba(255,255,255,0.45);max-width:600px;margin-bottom:3rem;line-height:1.7}
+.tc{text-align:center}
+.tc .sec-st{margin-left:auto;margin-right:auto}
+
+/* ===== ARCHITECTURE PIPELINE (simulated with features block) ===== */
+.pipe{display:flex;gap:0;align-items:stretch;justify-content:center;flex-wrap:wrap}
+.pipe-c{flex:1;min-width:180px;max-width:300px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);padding:1.25rem;transition:all .2s}
+.pipe-c.sel{border-color:rgba(0,255,136,0.3);box-shadow:0 0 24px rgba(0,255,136,0.18)}
+.pipe-c-1{font-size:10px;letter-spacing:0.22em;color:rgba(255,255,255,0.4);margin-bottom:8px}
+.pipe-c-2{font-size:13px;line-height:1.5;color:rgba(255,255,255,0.8);white-space:pre-line}
+.pipe-c-3{font-size:10px;color:#00FF88;display:block;margin-top:12px}
+.pipe-a{display:flex;align-items:center;color:rgba(255,255,255,0.2);padding:0 6px;font-size:18px}
+@media(max-width:768px){
+  .pipe{flex-direction:column;align-items:stretch}
+  .pipe-c{max-width:none}
+  .pipe-a{transform:rotate(90deg);padding:4px 0;justify-content:center}
+}
+
+/* ===== TAGS (simulated with cards block) ===== */
+.tags{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:600px;margin:2rem auto 0}
+.tag{padding:8px 14px;border-radius:999px;text-align:center;font-size:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5)}
+.tag.act{background:rgba(0,255,136,0.1);border-color:rgba(0,255,136,0.2);color:rgba(0,255,136,0.8)}
+@media(max-width:768px){.tags{grid-template-columns:1fr}}
+
+/* ===== PROCESS CARDS (features block) ===== */
+.proc{display:flex;flex-direction:column;gap:16px;max-width:700px;margin:0 auto}
+.proc-c{display:flex;gap:16px;border-radius:18px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);padding:1.5rem 1.75rem;transition:all .2s}
+.proc-c:hover{border-color:rgba(0,255,136,0.12)}
+.proc-d{width:8px;height:8px;border-radius:50%;background:#00FF88;box-shadow:0 0 10px #00FF88;margin-top:6px;flex-shrink:0}
+.proc-c-h{font-size:15px;font-weight:600;letter-spacing:-0.01em;color:#fff;margin-bottom:4px}
+.proc-c-p{font-size:13px;line-height:1.6;color:rgba(255,255,255,0.45)}
+.proc-ft{font-size:11px;color:rgba(255,255,255,0.3);margin-top:16px;text-align:center}
+
+/* ===== TEXT-IMAGE (block: text-image) ===== */
+.ti{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+.ti-i{border-radius:16px;overflow:hidden;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);box-shadow:0 8px 40px rgba(0,0,0,0.4)}
+.ti-i img{width:100%;height:auto;display:block}
+.ti-b p{font-size:1.05rem;color:rgba(255,255,255,0.6);line-height:1.8;margin-bottom:1rem}
+.ti-b .lead{font-size:1.2rem;color:rgba(255,255,255,0.85);font-weight:500;margin-bottom:1.5rem}
+@media(max-width:768px){.ti{grid-template-columns:1fr;gap:2rem}}
+
+/* ===== COUNTERS (block: counter) ===== */
+.ct{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;text-align:center;max-width:800px;margin:0 auto}
+.ct-n{font-size:clamp(2rem,4vw,3rem);font-weight:800;color:#00FF88;line-height:1}
+.ct-l{color:rgba(255,255,255,0.5);margin-top:6px;font-size:0.9375rem}
+@media(max-width:768px){.ct{grid-template-columns:1fr;gap:1.5rem}}
+
+/* ===== TESTIMONIALS (block: testimonials) ===== */
+.tg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;max-width:850px;margin:0 auto}
+.tt{border-radius:18px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);padding:1.5rem}
+.tt-s{color:#00FF88;font-size:1rem;margin-bottom:8px}
+.tt-q{font-size:0.9375rem;color:rgba(255,255,255,0.6);font-style:italic;line-height:1.6;margin-bottom:12px}
+.tt-a{font-size:0.875rem;color:rgba(255,255,255,0.35)}
+.tt-a strong{color:rgba(255,255,255,0.7)}
+
+/* ===== CTA (block: cta) ===== */
+.cta-s{background:linear-gradient(135deg,rgba(0,255,136,0.06),rgba(32,212,255,0.03));border-radius:24px;padding:4rem 2rem;text-align:center;border:1px solid rgba(0,255,136,0.1)}
+.cta-t{font-size:2.25rem;font-weight:800;color:#fff;margin-bottom:12px}
+.cta-st{font-size:1.05rem;color:rgba(255,255,255,0.5);margin-bottom:28px}
+.cta-btn{display:inline-flex;align-items:center;gap:8px;padding:14px 36px;border-radius:999px;background:#00FF88;color:#050A14;font-weight:700;font-size:15px;transition:all .2s;border:none;cursor:pointer}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,255,136,0.3)}
+
+/* ===== FOOTER (block: footer) ===== */
+.ft{padding:4rem 1.5rem;border-top:1px solid rgba(255,255,255,0.06);text-align:center}
+.ft-lg{font-size:1.2rem;font-weight:700;color:#00FF88;margin-bottom:6px}
+.ft-de{color:rgba(255,255,255,0.4);max-width:400px;margin:0 auto 1rem;font-size:0.9375rem}
+.ft-n{display:flex;justify-content:center;gap:24px;margin-bottom:1rem}
+.ft-n a{color:rgba(255,255,255,0.4);font-size:0.875rem;transition:color .2s}
+.ft-n a:hover{color:#fff}
+.ft-co{font-size:0.8125rem;color:rgba(255,255,255,0.25)}
+@media(max-width:768px){.ft-n{flex-direction:column;gap:10px}}
+
+/* ===== DIVIDER (block: divider) ===== */
+.hr{border:none;height:1px;background:linear-gradient(90deg,transparent,rgba(0,255,136,0.15),transparent);margin:0}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fi{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.an{animation:fi .5s ease forwards}
+.an-1{animation-delay:.1s;opacity:0}
+.an-2{animation-delay:.2s;opacity:0}
+.an-3{animation-delay:.3s;opacity:0}
+</style>
+</head>
+<body>
+
+<!-- BACKGROUND (CSS only) -->
+<div class="bg">
+  <img src="../eliccape_os_wallpaper.png" alt="" class="bg-wall">
+  <div class="bg-glow-t"></div>
+  <div class="bg-glow-b"></div>
+  <div class="bg-sc"></div>
+</div>
+
+<!-- HEADER (block: header) -->
+<header class="hd">
+  <div class="w hd-i">
+    <div class="hd-l">
+      <div class="hd-lb">
+        <img src="../logo.png" alt="ELICAPE">
+      </div>
+      <div class="hd-br">
+        <div class="hd-br-n">ELICAPE OS</div>
+        <div class="hd-br-v mono">v0.1 • LLEGAR A LA META</div>
+      </div>
+    </div>
+    <nav class="hd-n mono">
+      <a href="#manifiesto">MANIFIESTO</a>
+      <a href="#arquitectura">ARQUITECTURA</a>
+      <a href="#origen">ORIGEN</a>
+      <a href="#cta-final" class="cta">PROBAR</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO (block: hero) -->
+<section class="hero">
+  <div class="w hero-in">
+    <div class="hero-tg mono an an-1">
+      <span class="dot"></span>
+      <span>BUILD v0.1 • CONSTRUCTOR VISUAL</span>
+    </div>
+    <h1 class="an an-1">Construye páginas web<br><span class="gr">sin escribir código</span></h1>
+    <p class="an an-2">Editor visual con 17 tipos de bloque, arrastrar y soltar, exportación a HTML nativo y persistencia local. Hecho con React + Tauri. Sin backend, sin dependencias externas.</p>
+    <div class="hero-acts an an-3">
+      <a href="#cta-final" class="hero-btn-p">
+        <span>✦</span> Empezar Ahora
+      </a>
+      <a href="#manifiesto" class="hero-btn-s">
+        <span>→</span> Conocer Más
+      </a>
+    </div>
+  </div>
+  <div class="hero-gl"></div>
+</section>
+
+<hr class="hr">
+
+<!-- SECTION: Manifiesto / Arquitectura Real (block: features) -->
+<section class="sec" id="manifiesto">
+  <div class="w tc">
+    <h2 class="sec-t">Arquitectura Real</h2>
+    <p class="sec-st">Componentes que existen hoy en <span class="mono">src/</span> y <span class="mono">src-tauri/</span>. Sin humo, sin promesas.</p>
+  </div>
+  <div class="w">
+    <div class="pipe">
+      <div class="pipe-c sel">
+        <div class="pipe-c-1 mono">FRONTEND</div>
+        <div class="pipe-c-2 mono">React 19 • TypeScript<br>Tailwind v3 • Zustand<br>TipTap editor</div>
+        <span class="pipe-c-3 mono">↳ 17 secciones · 14 componentes</span>
+      </div>
+      <div class="pipe-a mono">—→</div>
+      <div class="pipe-c">
+        <div class="pipe-c-1 mono">BRIDGE</div>
+        <div class="pipe-c-2 mono">@tauri-apps/api<br>plugin-dialog<br>plugin-fs · invoke</div>
+        <span class="pipe-c-3 mono" style="color:rgba(255,255,255,0.3)">↳ 1 comando Rust: greet</span>
+      </div>
+      <div class="pipe-a mono">—→</div>
+      <div class="pipe-c">
+        <div class="pipe-c-1 mono">BACKEND</div>
+        <div class="pipe-c-2 mono">Rust • Tauri v2<br>dialog + fs plugins<br>JSZip export</div>
+        <span class="pipe-c-3 mono" style="color:rgba(255,255,255,0.3)">↳ Sin backend remoto</span>
+      </div>
+    </div>
+    <div class="tags">
+      <span class="tag act mono">tauri::invoke</span>
+      <span class="tag mono">tauri::dialog</span>
+      <span class="tag mono">tauri::fs</span>
+    </div>
+  </div>
+
+  <div style="height:48px"></div>
+
+  <!-- Process Cards (block: features) -->
+  <div class="w">
+    <div class="proc">
+      <div class="proc-c">
+        <div class="proc-d"></div>
+        <div>
+          <div class="proc-c-h">Añade bloques</div>
+          <div class="proc-c-p">Elige entre 17 tipos de sección desde el panel + Añadir. Hero, texto, tarjetas, pestañas, formularios y más.</div>
+        </div>
+      </div>
+      <div class="proc-c">
+        <div class="proc-d"></div>
+        <div>
+          <div class="proc-c-h">Edita en vivo</div>
+          <div class="proc-c-p">Cada bloque se edita directamente con TipTap. Texto enriquecido, imágenes, enlaces. Sin modales, sin recargar.</div>
+        </div>
+      </div>
+      <div class="proc-c">
+        <div class="proc-d"></div>
+        <div>
+          <div class="proc-c-h">Exporta a HTML</div>
+          <div class="proc-c-p">Descarga tu página como HTML standalone o ZIP con assets. Listo para subir a cualquier hosting.</div>
+        </div>
+      </div>
+    </div>
+    <p class="proc-ft mono">Open source • Sin inicio de sesión • Sin backend</p>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- SECTION: Texto + Imagen (block: text-image) -->
+<section class="sec" id="arquitectura">
+  <div class="w ti">
+    <div class="ti-i">
+      <img src="../cyberpunk_alley_laptop.png" alt="WebCraft Studio editor">
+    </div>
+    <div class="ti-b">
+      <p class="lead">Editor visual con arrastrar y soltar</p>
+      <p>Constructor-Web funciona 100% en el navegador o como aplicación de escritorio con Tauri. Los cambios se guardan automáticamente en LocalStorage y puedes exportar tu página como HTML standalone.</p>
+      <p>Incluye modo preview, zoom, deshacer/rehacer, copiar/pegar secciones, tema oscuro, exportación con CSS independiente y plantillas predefinidas para empezar al instante.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- SECTION: En cifras (block: counter) -->
+<section class="sec">
+  <div class="w tc">
+    <h2 class="sec-t">El Proyecto en Cifras</h2>
+    <p class="sec-st">Lo que el código real contiene hoy, medido desde <span class="mono">src/</span>.</p>
+  </div>
+  <div class="ct">
+    <div><div class="ct-n">17</div><div class="ct-l">Tipos de bloque</div></div>
+    <div><div class="ct-n">14</div><div class="ct-l">Componentes UI</div></div>
+    <div><div class="ct-n">6</div><div class="ct-l">Plantillas</div></div>
+    <div><div class="ct-n">5</div><div class="ct-l">Utilidades</div></div>
+    <div><div class="ct-n">1</div><div class="ct-l">Comando Rust</div></div>
+    <div><div class="ct-n">0</div><div class="ct-l">Dependencias externas</div></div>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- SECTION: Testimonios / Casos de Uso (block: testimonials) -->
+<section class="sec" id="origen">
+  <div class="w tc">
+    <h2 class="sec-t">Casos de Uso</h2>
+    <p class="sec-st">Lo que puedes construir con los bloques disponibles hoy.</p>
+  </div>
+  <div class="tg">
+    <div class="tt">
+      <div class="tt-s">★★★★★</div>
+      <p class="tt-q">"Landing page completa con hero, features, testimonios y CTA. Todo desde el editor visual, sin tocar código."</p>
+      <div class="tt-a"><strong>Landing Producto</strong> — Hero + Features + Testimonios + CTA + Acordeón</div>
+    </div>
+    <div class="tt">
+      <div class="tt-s">★★★★★</div>
+      <p class="tt-q">"Página de negocio local con header, servicios, contador y formulario de contacto. Exportada a HTML limpio."</p>
+      <div class="tt-a"><strong>Negocio Local</strong> — Header + Hero + Cards + Contador + CTA + Footer</div>
+    </div>
+    <div class="tt">
+      <div class="tt-s">★★★★★</div>
+      <p class="tt-q">"Portfolio creativo con galería, texto+imagen, características y formulario. Sin frameworks externos."</p>
+      <div class="tt-a"><strong>Portfolio</strong> — Hero + Text-Image + Galería + Features + Form</div>
+    </div>
+  </div>
+</section>
+
+<hr class="hr">
+
+<!-- SECTION: CTA Final (block: cta) -->
+<section class="sec" id="cta-final">
+  <div class="w">
+    <div class="cta-s">
+      <h2 class="cta-t">¿Listo para construir?</h2>
+      <p class="cta-st">Abre el editor, elige una plantilla y empieza a crear tu página web en segundos.</p>
+      <a href="#" class="cta-btn" onclick="alert('Abre Constructor-Web.html en tu navegador o ejecuta npm run dev'); return false;">
+        <span>✦</span> Abrir Constructor-Web
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER (block: footer) -->
+<footer class="ft">
+  <div class="ft-lg">ELICAPE OS</div>
+  <p class="ft-de">Constructor visual de páginas web. Sin código. Sin backend. Sin excusas.</p>
+  <nav class="ft-n">
+    <a href="#manifiesto">Manifiesto</a>
+    <a href="#arquitectura">Arquitectura</a>
+    <a href="#origen">Origen</a>
+    <a href="#cta-final">Empezar</a>
+  </nav>
+  <p class="ft-co mono">© 2026 ELICAPE OS · Hecho con React 19 + Rust + TypeScript</p>
+</footer>
+
+<script>
+(function(){
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      var id = this.getAttribute('href').slice(1);
+      var el = document.getElementById(id);
+      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+})();
+</script>
+</body>
+</html>
